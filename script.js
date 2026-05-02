@@ -1,39 +1,107 @@
-let display = document.getElementById("display");
+// Get display element
+const display = document.getElementById("display");
 
+// Append values to display
 function append(value) {
-  if (display.innerText === "0") {
+  const current = display.innerText;
+  const lastChar = current.slice(-1);
+
+  // Prevent multiple operators in a row
+  if ("+-*/%".includes(value) && "+-*/%".includes(lastChar)) {
+    return;
+  }
+
+  // Prevent multiple decimals in a number
+  if (value === "." && getLastNumber().includes(".")) {
+    return;
+  }
+
+  // Replace initial 0
+  if (current === "0") {
     display.innerText = value;
   } else {
     display.innerText += value;
   }
 }
 
+// Get last number segment
+function getLastNumber() {
+  return display.innerText.split(/[\+\-\*\/%]/).pop();
+}
+
+// Clear display
 function clearDisplay() {
   display.innerText = "0";
 }
 
+// Delete last character
 function deleteLast() {
-  display.innerText = display.innerText.slice(0, -1) || "0";
+  let current = display.innerText;
+  display.innerText = current.slice(0, -1) || "0";
 }
 
+// Main calculation function
 function calculate() {
   try {
-    let result = eval(display.innerText);
+    let expression = display.innerText;
+
+    // ✅ Allow only valid characters
+    if (!/^[0-9+\-*/%.() ]+$/.test(expression)) {
+      throw new Error("Invalid characters");
+    }
+
+    // ✅ Prevent incomplete expressions
+    if ("+-*/%".includes(expression.slice(-1))) {
+      throw new Error("Incomplete expression");
+    }
+
+    // ✅ Safe evaluation (instead of eval)
+    let result = Function('"use strict"; return (' + expression + ')')();
+
+    // ✅ Handle division by zero or Infinity
+    if (!isFinite(result)) {
+      throw new Error("Math error");
+    }
+
     display.innerText = result;
-  } catch {
-    display.innerText = "Error";
+
+  } catch (error) {
+    showError();
   }
 }
 
-// Keyboard Support
+// Show error and auto reset
+function showError() {
+  display.innerText = "Error";
+  setTimeout(() => {
+    display.innerText = "0";
+  }, 1500);
+}
+
+// =====================
+// ⌨️ Keyboard Support
+// =====================
 document.addEventListener("keydown", (e) => {
-  if (!isNaN(e.key) || "+-*/.".includes(e.key)) {
-    append(e.key);
-  } else if (e.key === "Enter") {
+  const key = e.key;
+
+  // Numbers & operators
+  if (!isNaN(key) || "+-*/.".includes(key)) {
+    append(key);
+  }
+
+  // Enter = calculate
+  else if (key === "Enter") {
+    e.preventDefault();
     calculate();
-  } else if (e.key === "Backspace") {
+  }
+
+  // Backspace = delete
+  else if (key === "Backspace") {
     deleteLast();
-  } else if (e.key === "Escape") {
+  }
+
+  // Escape = clear
+  else if (key === "Escape") {
     clearDisplay();
   }
 });
